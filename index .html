@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>VBC双驱能量测评 · 深度报告</title>
+    <style>
+        /* ===== 全局设计变量 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', '华文细黑', system-ui, sans-serif;
+            background: #0b1423;  /* 深邃夜空底色 */
+            min-height: 100vh;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-image: radial-gradient(circle at 10% 20%, rgba(245, 166, 35, 0.08) 0%, transparent 30%),
+                              radial-gradient(circle at 90% 80%, rgba(26, 43, 76, 0.6) 0%, transparent 40%);
+        }
+        .report-book {
+            max-width: 420px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            margin: 20px auto;
+            border-radius: 40px 40px 30px 30px;
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(245, 166, 35, 0.1) inset;
+            overflow: hidden;
+            position: relative;
+        }
+        /* 能量光点装饰 */
+        .energy-particle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .particle {
+            position: absolute;
+            background: #F5A623;
+            border-radius: 50%;
+            filter: blur(3px);
+            opacity: 0.15;
+            animation: float 15s infinite ease-in-out;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0) translateX(0); }
+            33% { transform: translateY(-15px) translateX(10px); }
+            66% { transform: translateY(10px) translateX(-10px); }
+        }
+
+        /* ===== 页面容器 ===== */
+        .page {
+            position: relative;
+            z-index: 2;
+            padding: 30px 24px;
+            border-bottom: 1px solid rgba(26, 43, 76, 0.08);
+        }
+        .page:last-child {
+            border-bottom: none;
+        }
+
+        /* ===== 装饰元素 ===== */
+        .deco-line {
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #F5A623, #1A2B4C);
+            border-radius: 3px;
+            margin: 20px auto 15px;
+            opacity: 0.5;
+        }
+        .section-tag {
+            display: inline-block;
+            padding: 6px 18px;
+            background: rgba(245, 166, 35, 0.1);
+            border-radius: 40px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1A2B4C;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(245, 166, 35, 0.3);
+            backdrop-filter: blur(5px);
+        }
+
+        /* ===== 标题体系 ===== */
+        h1 {
+            font-size: 32px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #1A2B4C 0%, #2a3f5c 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin: 5px 0 5px;
+            letter-spacing: 1px;
+        }
+        .subhead {
+            text-align: center;
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 20px;
+            font-weight: 300;
+            letter-spacing: 2px;
+        }
+
+        /* ===== 用户卡 ===== */
+        .user-card-elevated {
+            background: linear-gradient(145deg, #1A2B4C, #1f3452);
+            border-radius: 32px;
+            padding: 24px;
+            margin: 15px 0 25px;
+            box-shadow: 0 20px 30px -10px rgba(26, 43, 76, 0.4), 0 0 0 1px rgba(255, 215, 0, 0.2) inset;
+            position: relative;
+            overflow: hidden;
+        }
+        .user-card-elevated::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            right: -30px;
+            width: 150px;
+            height: 150px;
+            background: rgba(245, 166, 35, 0.1);
+            border-radius: 50%;
+            filter: blur(30px);
+        }
+        .user-name {
+            font-size: 32px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .user-meta {
+            display: flex;
+            gap: 20px;
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+        }
+
+        /* ===== 能量柱 ===== */
+        .energy-columns {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            height: 200px;
+            margin: 30px 0 20px;
+            padding: 0 5px;
+        }
+        .column-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 11%;
+        }
+        .column-bar {
+            width: 100%;
+            background: linear-gradient(180deg, #F5A623, #ffb84d);
+            border-radius: 20px 20px 8px 8px;
+            transition: height 0.5s ease-out;
+            box-shadow: 0 -2px 10px rgba(245, 166, 35, 0.3);
+            position: relative;
+        }
+        .column-label {
+            margin-top: 10px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #1A2B4C;
+            writing-mode: vertical-lr;
+            text-orientation: upright;
+            letter-spacing: -1px;
+        }
+        @media (max-width: 380px) {
+            .column-label { font-size: 9px; }
+        }
+
+        /* ===== 卡片 ===== */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-radius: 28px;
+            padding: 22px;
+            margin: 20px 0;
+            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 15px 30px -15px rgba(0,0,0,0.2);
+        }
+        .insight-card {
+            background: rgba(255, 248, 231, 0.7);
+            backdrop-filter: blur(10px);
+            border-left: 5px solid #F5A623;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .warning-card {
+            background: rgba(255, 237, 237, 0.7);
+            backdrop-filter: blur(10px);
+            border-left: 5px solid #e74c3c;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .success-card {
+            background: rgba(230, 244, 230, 0.7);
+            backdrop-filter: blur(10px);
+            border-left: 5px solid #27ae60;
+            border-radius: 20px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .letter-card {
+            background: rgba(250, 240, 220, 0.8);
+            backdrop-filter: blur(10px);
+            border-radius: 28px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 1px solid #F5A623;
+            font-style: italic;
+            line-height: 1.8;
+            box-shadow: 0 10px 25px -10px rgba(0,0,0,0.2);
+        }
+
+        /* ===== 指标圆环 ===== */
+        .metric-ring {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+        }
+        .ring-item {
+            width: 48%;
+            margin-bottom: 15px;
+        }
+        .ring-bg {
+            width: 100%;
+            height: 8px;
+            background: rgba(0,0,0,0.05);
+            border-radius: 8px;
+            margin: 8px 0 4px;
+            overflow: hidden;
+        }
+        .ring-fill {
+            height: 100%;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #F5A623, #ffb84d);
+        }
+
+        /* ===== 微动效 ===== */
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(245, 166, 35, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 166, 35, 0); }
+        }
+
+        /* ===== 印章 ===== */
+        .seal {
+            display: inline-block;
+            padding: 8px 20px;
+            background: #1A2B4C;
+            color: #F5A623;
+            border-radius: 40px;
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            border: 1px solid #F5A623;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* ===== 底部 ===== */
+        .footer-elegant {
+            text-align: center;
+            padding: 30px 24px 20px;
+            background: rgba(26, 43, 76, 0.02);
+            border-top: 1px solid rgba(26, 43, 76, 0.05);
+        }
+        .footer-logo {
+            font-size: 22px;
+            font-weight: 800;
+            color: #1A2B4C;
+            letter-spacing: 3px;
+        }
+        .footer-slogan {
+            color: #F5A623;
+            font-size: 14px;
+            font-style: italic;
+            margin: 10px 0 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="report-book" id="reportBook">
+        <!-- 能量光点背景（动态生成） -->
+        <div class="energy-particle" id="particles"></div>
+    </div>
+
+    <script>
+        (function() {
+            // ---------- 生成随机光点 ----------
+            function createParticles() {
+                const container = document.getElementById('particles');
+                if (!container) return;
+                container.innerHTML = '';
+                for (let i = 0; i < 20; i++) {
+                    const p = document.createElement('div');
+                    p.className = 'particle';
+                    const size = Math.random() * 60 + 20;
+                    p.style.width = size + 'px';
+                    p.style.height = size + 'px';
+                    p.style.left = Math.random() * 100 + '%';
+                    p.style.top = Math.random() * 100 + '%';
+                    p.style.animationDelay = Math.random() * 10 + 's';
+                    p.style.background = i % 3 === 0 ? '#F5A623' : '#1A2B4C';
+                    container.appendChild(p);
+                }
+            }
+            createParticles();
+
+            // ---------- 获取参数 ----------
+            function getParams() {
+                const params = new URLSearchParams(window.location.search);
+                return {
+                    name: decodeURIComponent(params.get('name') || '学员'),
+                    date: params.get('date') || new Date().toLocaleDateString('zh-CN').replace(/\//g, '.'),
+                    exist: parseFloat(params.get('exist')) || 5.0,
+                    conf: parseFloat(params.get('conf')) || 5.0,
+                    init: parseFloat(params.get('init')) || 5.0,
+                    dili: parseFloat(params.get('dili')) || 5.0,
+                    safe: parseFloat(params.get('safe')) || 5.0,
+                    trust: parseFloat(params.get('trust')) || 5.0,
+                    resp: parseFloat(params.get('resp')) || 5.0,
+                    comp: parseFloat(params.get('comp')) || 5.0
+                };
+            }
+
+            // 维度元数据
+            const dimensions = [
+                { key: 'exist', name: '存在感', desc: '被看见、被重视的程度' },
+                { key: 'conf', name: '自信感', desc: '自我价值认定' },
+                { key: 'init', name: '主动感', desc: '行动的自发性' },
+                { key: 'dili', name: '勤奋感', desc: '努力与坚持' },
+                { key: 'safe', name: '安全感', desc: '内心的稳定' },
+                { key: 'trust', name: '信任感', desc: '对他人的信赖' },
+                { key: 'resp', name: '责任感', desc: '担当意识' },
+                { key: 'comp', name: '完形感', desc: '完整与成就' }
+            ];
+
+            // 获取得分对应的等级
+            function getLevel(score) {
+                if (score <= 3) return { text: '严重不足', color: '#e74c3c', badge: '❌' };
+                if (score <= 6) return { text: '需要关注', color: '#F5A623', badge: '⚠️' };
+                return { text: '能量充足', color: '#27ae60', badge: '✅' };
+            }
+
+            // 渲染页面
+            function render() {
+                const p = getParams();
+                const scores = [
+                    { key: 'exist', val: p.exist },
+                    { key: 'conf', val: p.conf },
+                    { key: 'init', val: p.init },
+                    { key: 'dili', val: p.dili },
+                    { key: 'safe', val: p.safe },
+                    { key: 'trust', val: p.trust },
+                    { key: 'resp', val: p.resp },
+                    { key: 'comp', val: p.comp }
+                ];
+
+                // 找出最低分和最高分
+                let min = scores.reduce((a, b) => a.val < b.val ? a : b);
+                let max = scores.reduce((a, b) => a.val > b.val ? a : b);
+                let minDim = dimensions.find(d => d.key === min.key);
+                let maxDim = dimensions.find(d => d.key === max.key);
+                let minLevel = getLevel(min.val);
+                let maxLevel = getLevel(max.val);
+
+                let html = '';
+
+                // ========== 封面页 ==========
+                html += `<div class="page">`;
+                html += `<h1>双驱·能量报告</h1>`;
+                html += `<div class="subhead">VBC DUAL-DRIVE ASSESSMENT</div>`;
+                html += `<div class="user-card-elevated">`;
+                html += `<div class="user-name">${p.name}</div>`;
+                html += `<div class="user-meta"><span>📆 ${p.date}</span><span>🔖 VBC-${p.date.replace(/\./g,'')}-${Math.floor(Math.random()*1000)}</span></div>`;
+                html += `</div>`;
+                html += `<div style="text-align: center; margin: 20px 0 10px;"><span class="seal">深度解读 · 双驱教育</span></div>`;
+                html += `<div class="deco-line"></div>`;
+                html += `</div>`;
+
+                // ========== 第二页：测评说明 ==========
+                html += `<div class="page">`;
+                html += `<span class="section-tag">📘 测评说明</span>`;
+                html += `<div class="glass-card">`;
+                html += `<p style="font-size:16px; font-weight:600; margin-bottom:15px;">VBC双驱能量测评</p>`;
+                html += `<p style="font-size:14px; color:#555; line-height:1.7;">基于价值驱动和能量驱动双理论，通过8个核心维度，扫描个体的内在能量状态。每个维度得分0-10分，分数越高代表能量越充足。</p>`;
+                html += `<div style="margin:20px 0;">`;
+                html += `<p><span style="display:inline-block; width:12px; height:12px; background:#e74c3c; border-radius:3px;"></span> 0-3分 严重不足</p>`;
+                html += `<p><span style="display:inline-block; width:12px; height:12px; background:#F5A623; border-radius:3px;"></span> 4-6分 需要关注</p>`;
+                html += `<p><span style="display:inline-block; width:12px; height:12px; background:#27ae60; border-radius:3px;"></span> 7-10分 能量充足</p>`;
+                html += `</div>`;
+                html += `<p style="font-size:13px; color:#999; margin-top:15px;">本报告依据您填写的问卷数据生成，建议每3-6个月复测一次追踪变化。</p>`;
+                html += `</div>`;
+                html += `</div>`;
+
+                // ========== 第三页：能量全景 ==========
+                html += `<div class="page">`;
+                html += `<span class="section-tag">⚡ 能量全景</span>`;
+                html += `<h2 style="font-size:24px; margin:5px 0 20px; color:#1A2B4C;">${p.name}的八维能量</h2>`;
+                
+                // 能量柱状图
+                html += `<div class="energy-columns">`;
+                scores.forEach(s => {
+                    let height = s.val * 20; // 2分→40px, 10分→200px
+                    let level = getLevel(s.val);
+                    let dim = dimensions.find(d => d.key === s.key);
+                    html += `<div class="column-item">`;
+                    html += `<div class="column-bar" style="height: ${height}px; background: linear-gradient(180deg, ${level.color}, ${level.color}dd);"></div>`;
+                    html += `<div class="column-label">${dim.name}</div>`;
+                    html += `</div>`;
+                });
+                html += `</div>`;
+
+                // 简要解读
+                html += `<div class="insight-card">`;
+                html += `<p style="font-size:16px; line-height:1.6;">${p.name}的能量以 <strong style="color:${maxLevel.color};">${maxDim.name}(${max.val}分)</strong> 为优势，但 <strong style="color:${minLevel.color};">${minDim.name}(${min.val}分)</strong> 是当前需要充电的核心。整体呈现“${maxDim.name}有余，${minDim.name}不足”的状态。</p>`;
+                html += `</div>`;
+                html += `</div>`;
+
+                // ========== 第四页：详细得分 ==========
+                html += `<div class="page">`;
+                html += `<span class="section-tag">📊 维度解析</span>`;
+                html += `<div class="glass-card">`;
+                scores.forEach(s => {
+                    let level = getLevel(s.val);
+                    let dim = dimensions.find(d => d.key === s.key);
+                    html += `<div style="margin-bottom: 18px;">`;
+                    html += `<div style="display: flex; justify-content: space-between;">`;
+                    html += `<span style="font-weight:600; color:#1A2B4C;">${dim.name}</span>`;
+                    html += `<span style="color:${level.color}; font-weight:600;">${level.badge} ${s.val.toFixed(1)}分 ${level.text}</span>`;
+                    html += `</div>`;
+                    html += `<div class="ring-bg"><div class="ring-fill" style="width: ${s.val*10}%; background:${level.color};"></div></div>`;
+                    html += `<div style="font-size:13px; color:#666; margin-top:4px;">${dim.desc}</div>`;
+                    html += `</div>`;
+                });
+                html += `</div>`;
+                html += `</div>`;
+
+                // ========== 第五页：最低分深度解读 ==========
+                html += `<div class="page">`;
+                html += `<span class="section-tag">🔻 能量洼地</span>`;
+                html += `<div class="warning-card">`;
+                html += `<div style="font-size:20px; font-weight:700; color:#e74c3c; margin-bottom:15px;">${minDim.name} · ${min.val}分</div>`;
+                html += `<p style="line-height:1.7;">${minDim.name}是${p.name}当前最需要充电的维度。${minDim.desc}。</p>`;
+                
+                // 扎心一问
+                if (min.val <= 4) {
+                    let traumaText = '';
+                    if (min.key === 'init') traumaText = '“你小时候，是不是常常被催着走？”';
+                    else if (min.key === 'exist') traumaText = '“你小时候，是不是常常被忽略？”';
+                    else if (min.key === 'trust') traumaText = '“你小时候，是不是常常被骗？”';
+                    else traumaText = '“这个卡点，可能来自童年的某个经历。”';
+                    html += `<div style="background:rgba(255,255,255,0.5); border-radius:16px; padding:16px; margin:15px 0;">`;
+                    html += `<p style="font-size:22px; text-align:center; color:#1A2B4C; font-style:italic;">${traumaText}</p>`;
+                    html += `</div>`;
+                }
+                html += `<p style="margin-top:15px;">💡 充电建议：每天给${p.name}2-3次真实选择的机会，从“今天想先做哪件事”开始，让TA体验“我的选择我做主”。</p>`;
+                html += `</div>`;
+                html += `</div>`;
+
+                // ========== 第六页：最高分 & 创伤关联 ==========
+                html += `<div class="page">`;
+                html += `<span class="section-tag">✨ 能量优势</span>`;
+                html += `<div class="success-card">`;
+                html += `<div style="font-size:20px; font-weight:700; color:#27ae60; margin-bottom:15px;">${maxDim.name} · ${max.val}分</div>`;
+                html += `<p>${maxDim.name}是${p.name}最强大的能量来源。这意味着TA ${max.key === 'resp' ? '是一个值得信赖、愿意担当的人' : '在这个维度有天然的优势'}。</p>`;
+                html += `</div>`;
+
+                // 创伤关联（如果最低分≤4）
+                if (min.val <= 4) {
+                    html += `<div style="background:rgba(245,166,35,0.1); border-radius:20px; padding:20px; margin-top:20px;">`;
+                    html += `<p style="font-weight:600; color:#1A2B4C; margin-bottom:10px;">🌀 创伤的礼物</p>`;
+                    html += `<p style="font-size:15px; line-height:1.7;">那个曾经被催着走的小孩，现在已经长大。你可以对过去的自己说：“现在，我可以自己决定什么时候开始。”这份觉察，就是疗愈的开始。</p>`;
+                    html += `</div>`;
+                }
+                html += `</div>`;
+
+                // ========== 第七页：提升方案 ==========
+                html += `<div class="page">`;
+                html += `<span class="section-tag">🌱 成长方案</span>`;
+                html += `<div class="glass-card">`;
+                html += `<p style="font-weight:600; color:#F5A623;">短期 (1-3个月)</p>`;
+                html += `<p style="margin-bottom:20px;">每天3次具体看见 · 每天2-3个选择权 · 完成小任务后确认</p>`;
+                html += `<p style="font-weight:600; color:#F5A623;">中期 (3-6个月)</p>`;
+                html += `<p style="margin-bottom:20px;">强化优势领域 · 练习承诺兑现 · 接纳失败</p>`;
+                html += `<p style="font-weight:600; color:#F5A623;">长期 (6个月+)</p>`;
+                html += `<p>参与目标制定 · 探索热爱 · 连接学习意义</p>`;
+                html += `</div>`;
+                html += `</div>`;
+
+                // ========== 第八页：家长信 ==========
+                html += `<div class="page">`;
+                html += `<span class="section-tag">💌 致家长的信</span>`;
+                html += `<div class="letter-card">`;
+                html += `<p style="margin-bottom:15px;">亲爱的家长：</p>`;
+                html += `<p style="margin-bottom:15px;">这份报告不是一份判决书，而是一张通往孩子内心的地图。每一个分数背后，都有一个等待被看见的灵魂。您的耐心、陪伴和信任，是孩子最好的能量补给。</p>`;
+                html += `<p>请记住，成长不是一场竞赛，而是一段共同探索的旅程。我们与您同行。</p>`;
+                html += `<p style="text-align:right; margin-top:25px;">—— 双驱教育 全体导师</p>`;
+                html += `</div>`;
+                html += `</div>`;
+
+                // ========== 第九页：后续服务 ==========
+                html += `<div class="page">`;
+                html += `<span class="section-tag">🛠️ 后续服务</span>`;
+                html += `<div class="glass-card">`;
+                html += `<p style="font-weight:600; color:#1A2B4C;">✦ 3天线上转化营</p>`;
+                html += `<p style="margin-bottom:15px;">谭老师亲自带，从看见到做到</p>`;
+                html += `<p style="font-weight:600; color:#1A2B4C;">✦ 会员专区·养护站</p>`;
+                html += `<p style="margin-bottom:15px;">秀瑛老师每周直播，日常陪伴</p>`;
+                html += `<p style="font-weight:600; color:#1A2B4C;">✦ 天才计划</p>`;
+                html += `<p>系统重装，让创伤在这一代终止</p>`;
+                html += `<div style="background:#F5A623; color:#1A2B4C; text-align:center; padding:14px; border-radius:50px; margin:20px 0;">扫码咨询 · 开启能量之旅</div>`;
+                html += `<p style="font-size:13px; color:#999;">客服微信：shuangqu001</p>`;
+                html += `</div>`;
+                html += `</div>`;
+
+                // ========== 第十页：结语 ==========
+                html += `<div class="footer-elegant">`;
+                html += `<div class="footer-logo">双驱教育</div>`;
+                html += `<div class="footer-slogan">让每个孩子都活在充足的能量里</div>`;
+                html += `<div style="margin:10px 0; font-size:11px; color:#bbb;">www.shuangquedu.com</div>`;
+                html += `</div>`;
+
+                document.getElementById('reportBook').innerHTML += html;
+            }
+
+            render();
+        })();
+    </script>
+</body>
+</html>
